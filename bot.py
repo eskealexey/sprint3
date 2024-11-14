@@ -2,6 +2,7 @@ import telebot
 from PIL import Image
 import io
 from telebot import types
+
 import os
 from dotenv import load_dotenv, find_dotenv
 
@@ -14,7 +15,6 @@ user_states = {}  # тут будем хранить информацию о д�
 
 # набор символов из которых составляем изображение
 ASCII_CHARS = '@%#*+=-:. '
-
 
 def resize_image(image, new_width=100):
     width, height = image.size
@@ -79,9 +79,34 @@ def send_welcome(message):
 
 @bot.message_handler(content_types=['photo'])
 def handle_photo(message):
-    bot.reply_to(message, "I got your photo! Please choose what you'd like to do with it.",
-                 reply_markup=get_options_keyboard())
+    '''
+    Загружаем фото
+    '''
+    bot.reply_to(message, "I got your photo! Please choose what you'd like to do with it.") #, reply_markup=get_options_keyboard())
     user_states[message.chat.id] = {'photo': message.photo[-1].file_id}
+    bot.send_message(message.chat.id, "Хотите изменить набор символов?(yes/да или no/нет)")
+
+
+@bot.message_handler(content_types=['text'])
+def handle_text(message):
+    global ASCII_CHARS
+
+    if message.text.lower() == "да" or message.text.lower() == "yes":
+        bot.send_message(message.chat.id,"Введите набор символов")
+
+        user_states[message.chat.id]['ascii_chars'] = True
+
+    elif message.text.lower() == "нет" or message.text.lower() == "no":
+        ASCII_CHARS = '@%#*+=-:. '
+        bot.reply_to(message, "I got your photo! Please choose what you'd like to do with it.",
+                     reply_markup=get_options_keyboard())
+
+    elif user_states[message.chat.id]['ascii_chars']:
+        ASCII_CHARS = message.text
+        bot.reply_to(message, "I got your photo! Please choose what you'd like to do with it.",
+                     reply_markup=get_options_keyboard())
+    else:
+        bot.send_message(message.chat.id, "Не понимаю")
 
 
 def get_options_keyboard():
@@ -118,6 +143,7 @@ def pixelate_and_send(message):
 
 
 def ascii_and_send(message):
+
     photo_id = user_states[message.chat.id]['photo']
     file_info = bot.get_file(photo_id)
     downloaded_file = bot.download_file(file_info.file_path)
@@ -125,6 +151,7 @@ def ascii_and_send(message):
     image_stream = io.BytesIO(downloaded_file)
     ascii_art = image_to_ascii(image_stream)
     bot.send_message(message.chat.id, f"```\n{ascii_art}\n```", parse_mode="MarkdownV2")
+
 
 
 bot.polling(none_stop=True)
