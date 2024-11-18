@@ -17,6 +17,9 @@ user_states = {}  # тут будем хранить информацию о д�
 ASCII_CHARS = '@%#*+=-:. '
 
 def resize_image(image, new_width=100):
+    '''
+    Изменяет размер изображения
+    '''
     width, height = image.size
     ratio = height / width
     new_height = int(new_width * ratio)
@@ -24,10 +27,14 @@ def resize_image(image, new_width=100):
 
 
 def grayify(image):
+    ''''Преобразует изображение в черно-белое'''
     return image.convert("L")
 
 
 def image_to_ascii(image_stream, new_width=40):
+    '''
+    Преобразует изображение в ASCII-арт
+    '''
     # Переводим в оттенки серого
     image = Image.open(image_stream).convert('L')
 
@@ -52,6 +59,9 @@ def image_to_ascii(image_stream, new_width=40):
 
 
 def pixels_to_ascii(image):
+    '''
+    Функция перевода изображения в набор символов
+    '''
     pixels = image.getdata()
     characters = ""
     for pixel in pixels:
@@ -59,8 +69,10 @@ def pixels_to_ascii(image):
     return characters
 
 
-# Огрубляем изображение
 def pixelate_image(image, pixel_size):
+    '''
+    Функция огрубления изображения
+    '''
     image = image.resize(
         (image.size[0] // pixel_size, image.size[1] // pixel_size),
         Image.NEAREST
@@ -74,6 +86,9 @@ def pixelate_image(image, pixel_size):
 
 @bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
+    '''
+    Приветствие
+    '''
     bot.reply_to(message, "Send me an image, and I'll provide options for you!")
 
 
@@ -89,6 +104,9 @@ def handle_photo(message):
 
 @bot.message_handler(content_types=['text'])
 def handle_text(message):
+    '''
+    Обработка текста
+    '''
     global ASCII_CHARS
 
     if message.text.lower() == "да" or message.text.lower() == "yes":
@@ -110,16 +128,23 @@ def handle_text(message):
 
 
 def get_options_keyboard():
+    '''
+    Кнопки для выбора действия
+    '''
     keyboard = types.InlineKeyboardMarkup()
     pixelate_btn = types.InlineKeyboardButton("Pixelate", callback_data="pixelate")
     ascii_btn = types.InlineKeyboardButton("ASCII Art", callback_data="ascii")
     invert_btn = types.InlineKeyboardButton("Invert", callback_data="invert")
-    keyboard.add(pixelate_btn, ascii_btn, invert_btn)
+    mirror_btn = types.InlineKeyboardButton("Mirror", callback_data="mirror")
+    keyboard.add(pixelate_btn, ascii_btn, invert_btn, mirror_btn)
     return keyboard
 
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback_query(call):
+    '''
+    Обработка нажатия на кнопки
+    '''
     if call.data == "pixelate":
         bot.answer_callback_query(call.id, "Pixelating your image...")
         pixelate_and_send(call.message)
@@ -129,9 +154,17 @@ def callback_query(call):
     elif call.data == "invert":
         bot.answer_callback_query(call.id, "Inverting your image...")
         invert_colors(call.message)
+    elif call.data == "mirror":
+        bot.answer_callback_query(call.id, "Mirroring your image...")
+        mirror_image(call.message)
+    else:
+        bot.answer_callback_query(call.id, "I don't understand your request.")
 
 
 def pixelate_and_send(message):
+    '''
+    Огрубление изображения
+    '''
     photo_id = user_states[message.chat.id]['photo']
     file_info = bot.get_file(photo_id)
     downloaded_file = bot.download_file(file_info.file_path)
@@ -147,7 +180,9 @@ def pixelate_and_send(message):
 
 
 def ascii_and_send(message):
-
+    '''
+    Преобразование изображения в ASCII-арт
+    '''
     photo_id = user_states[message.chat.id]['photo']
     file_info = bot.get_file(photo_id)
     downloaded_file = bot.download_file(file_info.file_path)
@@ -158,6 +193,9 @@ def ascii_and_send(message):
 
 
 def invert_colors(message):
+    '''
+    Инвертирование цветов
+    '''
     file_id = user_states[message.chat.id]['photo']
     file_info = bot.get_file(file_id)
     downloaded_file = bot.download_file(file_info.file_path)
@@ -170,5 +208,20 @@ def invert_colors(message):
     output_stream.seek(0)
     bot.send_photo(message.chat.id, output_stream)
 
+
+def mirror_image(message):
+    '''
+    Отражение изображения слева направо
+    '''
+    file_id = user_states[message.chat.id]['photo']
+    file_info = bot.get_file(file_id)
+    downloaded_file = bot.download_file(file_info.file_path)
+    image_stream = io.BytesIO(downloaded_file)
+    image = Image.open(image_stream)
+    mirrored = image.transpose(Image.FLIP_LEFT_RIGHT)
+    output_stream = io.BytesIO()
+    mirrored.save(output_stream, format="JPEG")
+    output_stream.seek(0)
+    bot.send_photo(message.chat.id, output_stream)
 
 bot.polling(none_stop=True)
