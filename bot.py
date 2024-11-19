@@ -1,4 +1,4 @@
-import telebot
+from telebot import *
 from PIL import Image, ImageOps
 import io
 from telebot import types
@@ -136,7 +136,8 @@ def get_options_keyboard():
     ascii_btn = types.InlineKeyboardButton("ASCII Art", callback_data="ascii")
     invert_btn = types.InlineKeyboardButton("Invert", callback_data="invert")
     mirror_btn = types.InlineKeyboardButton("Mirror", callback_data="mirror")
-    keyboard.add(pixelate_btn, ascii_btn, invert_btn, mirror_btn)
+    colorrizer_btn = types.InlineKeyboardButton("Colorrizer", callback_data="colorrizer")
+    keyboard.add(pixelate_btn, ascii_btn, invert_btn, mirror_btn, colorrizer_btn)
     return keyboard
 
 
@@ -157,6 +158,9 @@ def callback_query(call):
     elif call.data == "mirror":
         bot.answer_callback_query(call.id, "Mirroring your image...")
         mirror_image(call.message)
+    elif call.data == "colorrizer":
+        bot.answer_callback_query(call.id, "Colorrizing your image...")
+        convert_to_heatmap(call.message)
     else:
         bot.answer_callback_query(call.id, "I don't understand your request.")
 
@@ -223,5 +227,22 @@ def mirror_image(message):
     mirrored.save(output_stream, format="JPEG")
     output_stream.seek(0)
     bot.send_photo(message.chat.id, output_stream)
+
+
+def convert_to_heatmap(message):
+    '''
+    Преобразование изображения в тепловую карту
+    '''
+    file_id = user_states[message.chat.id]['photo']
+    file_info = bot.get_file(file_id)
+    downloaded_file = bot.download_file(file_info.file_path)
+    image_stream = io.BytesIO(downloaded_file)
+    image = Image.open(image_stream)
+    heatmap = ImageOps.colorize(grayify(image),(0, 0, 0), (255, 255, 255))
+    output_stream = io.BytesIO()
+    heatmap.save(output_stream, format="JPEG")
+    output_stream.seek(0)
+    bot.send_photo(message.chat.id, output_stream)
+
 
 bot.polling(none_stop=True)
