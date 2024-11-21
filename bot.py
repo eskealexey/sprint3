@@ -137,7 +137,8 @@ def get_options_keyboard():
     invert_btn = types.InlineKeyboardButton("Invert", callback_data="invert")
     mirror_btn = types.InlineKeyboardButton("Mirror", callback_data="mirror")
     colorrizer_btn = types.InlineKeyboardButton("Colorrizer", callback_data="colorrizer")
-    keyboard.add(pixelate_btn, ascii_btn, invert_btn, mirror_btn, colorrizer_btn)
+    resizer_btn = types.InlineKeyboardButton("Resize", callback_data="resize")
+    keyboard.add(pixelate_btn, ascii_btn, invert_btn, mirror_btn, colorrizer_btn, resizer_btn)
     return keyboard
 
 
@@ -161,6 +162,9 @@ def callback_query(call):
     elif call.data == "colorrizer":
         bot.answer_callback_query(call.id, "Colorrizing your image...")
         convert_to_heatmap(call.message)
+    elif call.data == "resize":
+        bot.answer_callback_query(call.id, "Resizing your image...")
+        resize_for_sticker (call.message)
     else:
         bot.answer_callback_query(call.id, "I don't understand your request.")
 
@@ -243,6 +247,29 @@ def convert_to_heatmap(message):
     heatmap.save(output_stream, format="JPEG")
     output_stream.seek(0)
     bot.send_photo(message.chat.id, output_stream)
+
+
+def  resize_for_sticker (message):
+    size = (128, 128)
+    file_id = user_states[message.chat.id]['photo']
+    file_info = bot.get_file(file_id)
+    downloaded_file = bot.download_file(file_info.file_path)
+    image_stream = io.BytesIO(downloaded_file)
+    image = Image.open(image_stream)
+    width, height = image.size
+    if width > height:
+        ratio = width / size[0]
+        new_height = int(height / ratio)
+        new_size = (size[0], new_height)
+    else:
+        ratio = height / size[1]
+        new_width = int(width / ratio)
+        new_size = (new_width, size[1])
+    resized = image.resize(new_size)
+    output_stream = io.BytesIO()
+    resized.save(output_stream, format="JPEG")
+    output_stream.seek(0)
+    bot.send_sticker(message.chat.id, output_stream)
 
 
 bot.polling(none_stop=True)
