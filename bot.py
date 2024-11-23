@@ -16,10 +16,24 @@ user_states = {}  # тут будем хранить информацию о д�
 # набор символов из которых составляем изображение
 ASCII_CHARS = '@%#*+=-:. '
 
+JOKES = [
+    '"Крошка-картошка" — организация, запрещённая в Республике Беларусь',
+    'Я не конфетка, что всем по вкусу! Я — орешек, что не всем по зубам!',
+    'Это Лена. Она такая спокойная, что из себя её вывести может только мышь. Мёртвая',
+    'Лучшее средство для самоочищения и искупления в муках - молоко с огурцом',
+    'Порядочные люди не гремят бутылками когда выкидывают мусор',
+    'Вампиры-гопники вместо семок грызут насосавшихся комаров',
+    'Чем сильнее охреневаешь от происходящего, тем точнее улавливаешь суть.',
+    'Одиночество - это когда вместо кота я глажу свою волосатую ногу. Таня, 18 лет',
+    'Однажды меня немножко испортили деньги, но долги быстро починили',
+    'Велик жесткий диск, а поиграть не во что...',
+]
+
+
 def resize_image(image, new_width=100):
-    '''
+    """
     Изменяет размер изображения
-    '''
+    """
     width, height = image.size
     ratio = height / width
     new_height = int(new_width * ratio)
@@ -27,14 +41,14 @@ def resize_image(image, new_width=100):
 
 
 def grayify(image):
-    ''''Преобразует изображение в черно-белое'''
+    """Преобразует изображение в черно-белое"""
     return image.convert("L")
 
 
 def image_to_ascii(image_stream, new_width=40):
-    '''
+    """
     Преобразует изображение в ASCII-арт
-    '''
+    """
     # Переводим в оттенки серого
     image = Image.open(image_stream).convert('L')
 
@@ -59,9 +73,9 @@ def image_to_ascii(image_stream, new_width=40):
 
 
 def pixels_to_ascii(image):
-    '''
+    """
     Функция перевода изображения в набор символов
-    '''
+    """
     pixels = image.getdata()
     characters = ""
     for pixel in pixels:
@@ -70,9 +84,9 @@ def pixels_to_ascii(image):
 
 
 def pixelate_image(image, pixel_size):
-    '''
+    """
     Функция огрубления изображения
-    '''
+    """
     image = image.resize(
         (image.size[0] // pixel_size, image.size[1] // pixel_size),
         Image.NEAREST
@@ -86,17 +100,13 @@ def pixelate_image(image, pixel_size):
 
 @bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
-    '''
-    Приветствие
-    '''
+    """Отправка приветствия"""
     bot.reply_to(message, "Send me an image, and I'll provide options for you!")
 
 
 @bot.message_handler(content_types=['photo'])
 def handle_photo(message):
-    '''
-    Загружаем фото
-    '''
+    """Обработка фото"""
     bot.reply_to(message, "I got your photo! Please choose what you'd like to do with it.") #, reply_markup=get_options_keyboard())
     user_states[message.chat.id] = {'photo': message.photo[-1].file_id}
     bot.send_message(message.chat.id, "Хотите изменить набор символов?(yes/да или no/нет)")
@@ -104,9 +114,9 @@ def handle_photo(message):
 
 @bot.message_handler(content_types=['text'])
 def handle_text(message):
-    '''
+    """
     Обработка текста
-    '''
+    """
     global ASCII_CHARS
 
     if message.text.lower() == "да" or message.text.lower() == "yes":
@@ -118,7 +128,8 @@ def handle_text(message):
         ASCII_CHARS = '@%#*+=-:. '
         bot.reply_to(message, "I got your photo! Please choose what you'd like to do with it.",
                      reply_markup=get_options_keyboard())
-
+    elif message.text.lower() == "random joke":
+        bot.send_message(message.chat.id, get_random_joke())
     elif user_states[message.chat.id]['ascii_chars']:
         ASCII_CHARS = message.text
         bot.reply_to(message, "I got your photo! Please choose what you'd like to do with it.",
@@ -127,10 +138,17 @@ def handle_text(message):
         bot.send_message(message.chat.id, "Не понимаю")
 
 
+def get_random_joke():
+    """
+    Получение случайной шутки
+    """
+    return random.choice(JOKES)
+
+
 def get_options_keyboard():
-    '''
+    """
     Кнопки для выбора действия
-    '''
+    """
     keyboard = types.InlineKeyboardMarkup()
     pixelate_btn = types.InlineKeyboardButton("Pixelate", callback_data="pixelate")
     ascii_btn = types.InlineKeyboardButton("ASCII Art", callback_data="ascii")
@@ -138,15 +156,16 @@ def get_options_keyboard():
     mirror_btn = types.InlineKeyboardButton("Mirror", callback_data="mirror")
     colorrizer_btn = types.InlineKeyboardButton("Colorrizer", callback_data="colorrizer")
     resizer_btn = types.InlineKeyboardButton("Resize", callback_data="resize")
+
     keyboard.add(pixelate_btn, ascii_btn, invert_btn, mirror_btn, colorrizer_btn, resizer_btn)
     return keyboard
 
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback_query(call):
-    '''
+    """
     Обработка нажатия на кнопки
-    '''
+    """
     if call.data == "pixelate":
         bot.answer_callback_query(call.id, "Pixelating your image...")
         pixelate_and_send(call.message)
@@ -165,14 +184,17 @@ def callback_query(call):
     elif call.data == "resize":
         bot.answer_callback_query(call.id, "Resizing your image...")
         resize_for_sticker (call.message)
+    elif call.data == "joke":
+        bot.answer_callback_query(call.id, "I'm not funny.")
+
     else:
         bot.answer_callback_query(call.id, "I don't understand your request.")
 
 
 def pixelate_and_send(message):
-    '''
+    """
     Огрубление изображения
-    '''
+    """
     photo_id = user_states[message.chat.id]['photo']
     file_info = bot.get_file(photo_id)
     downloaded_file = bot.download_file(file_info.file_path)
@@ -188,9 +210,9 @@ def pixelate_and_send(message):
 
 
 def ascii_and_send(message):
-    '''
+    """
     Преобразование изображения в ASCII-арт
-    '''
+    """
     photo_id = user_states[message.chat.id]['photo']
     file_info = bot.get_file(photo_id)
     downloaded_file = bot.download_file(file_info.file_path)
@@ -201,9 +223,9 @@ def ascii_and_send(message):
 
 
 def invert_colors(message):
-    '''
+    """
     Инвертирование цветов
-    '''
+    """
     file_id = user_states[message.chat.id]['photo']
     file_info = bot.get_file(file_id)
     downloaded_file = bot.download_file(file_info.file_path)
@@ -218,9 +240,9 @@ def invert_colors(message):
 
 
 def mirror_image(message):
-    '''
+    """
     Отражение изображения слева направо
-    '''
+    """
     file_id = user_states[message.chat.id]['photo']
     file_info = bot.get_file(file_id)
     downloaded_file = bot.download_file(file_info.file_path)
@@ -234,9 +256,9 @@ def mirror_image(message):
 
 
 def convert_to_heatmap(message):
-    '''
+    """
     Преобразование изображения в тепловую карту
-    '''
+    """
     file_id = user_states[message.chat.id]['photo']
     file_info = bot.get_file(file_id)
     downloaded_file = bot.download_file(file_info.file_path)
@@ -250,6 +272,9 @@ def convert_to_heatmap(message):
 
 
 def  resize_for_sticker (message):
+    """
+    Ресайз изображения для стикера
+    """
     size = (128, 128)
     file_id = user_states[message.chat.id]['photo']
     file_info = bot.get_file(file_id)
