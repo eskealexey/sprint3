@@ -29,6 +29,15 @@ JOKES = [
     'Велик жесткий диск, а поиграть не во что...',
 ]
 
+COMPLIMENTS = [
+    'Ты замечательно выглядишь',
+    'Я не могу оторвать взгляд от твоей улыбки',
+    'У тебя красивые глаза',
+    'У тебя безупречный вкус',
+    'Твоя улыбка согревает меня даже в самые лютые холода',
+    'От твоих глаз невозможно оторвать взгляд. Это мой любимый оттенок',
+    'Жаль, что я не художник. Я бы запечатлел твою красоту',
+]
 
 def resize_image(image, new_width=100):
     """
@@ -130,6 +139,9 @@ def handle_text(message):
                      reply_markup=get_options_keyboard())
     elif message.text.lower() == "random joke":
         bot.send_message(message.chat.id, get_random_joke())
+    elif message.text.lower() == "random compliment":
+        bot.send_message(message.chat.id, get_random_compliment())
+
     elif user_states[message.chat.id]['ascii_chars']:
         ASCII_CHARS = message.text
         bot.reply_to(message, "I got your photo! Please choose what you'd like to do with it.",
@@ -143,6 +155,12 @@ def get_random_joke():
     Получение случайной шутки
     """
     return random.choice(JOKES)
+
+def get_random_compliment():
+    """
+    Получение случайного комплимента
+    """
+    return random.choice(COMPLIMENTS)
 
 
 def get_options_keyboard():
