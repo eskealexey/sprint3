@@ -39,6 +39,8 @@ COMPLIMENTS = [
     'Жаль, что я не художник. Я бы запечатлел твою красоту',
 ]
 
+coin_states = ("Heads", "Tails")
+
 def resize_image(image, new_width=100):
     """
     Изменяет размер изображения
@@ -141,6 +143,8 @@ def handle_text(message):
         bot.send_message(message.chat.id, get_random_joke())
     elif message.text.lower() == "random compliment":
         bot.send_message(message.chat.id, get_random_compliment())
+    elif message.text.lower() == "flip a coin":
+        bot.send_message(message.chat.id, get_flip_and_send(message))
 
     elif user_states[message.chat.id]['ascii_chars']:
         ASCII_CHARS = message.text
@@ -161,6 +165,13 @@ def get_random_compliment():
     Получение случайного комплимента
     """
     return random.choice(COMPLIMENTS)
+
+
+def get_flip_and_send(message):
+    """
+    Обработка нажатия на кнопку "Монетка"
+    """
+    return random.choice(coin_states)
 
 
 def get_options_keyboard():
